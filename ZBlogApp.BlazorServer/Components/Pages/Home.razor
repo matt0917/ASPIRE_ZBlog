@@ -1,0 +1,24 @@
+﻿@page "/"
+
+<PageTitle>Z-Blogger</PageTitle>
+
+<div class="d-flex flex-column justify-content-center align-items-center vh-100 text-center">
+    <img src="data:image/svg+xml;base64,@Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(LogoSvg))" 
+         width="150" height="150" alt="Z-Blogger Logo" class="mb-4" />
+    
+    <h1 class="mb-2 display-1">Welcome to Z-Blogger</h1>
+    <p class="lead display-6">Discover a world of ideas, insights, and stories curated just for you.</p>
+</div>
+
+@code 
+{
+    private string LogoSvg = @"
+        <svg width='225' height='225' viewBox='0 0 225 225' xmlns='http://www.w3.org/2000/svg'>
+            <rect width='225' height='225' rx='30' fill='#007BFF'/>
+            <text x='50%' y='45%' font-family='Arial, sans-serif' font-size='130' font-weight='bold' 
+                  fill='white' text-anchor='middle' dominant-baseline='middle'>Z</text>
+            <path d='M 50 160 Q 112.5 200, 175 160' stroke='white' stroke-width='8' fill='none'/>
+            <circle cx='175' cy='160' r='8' fill='white'/>
+        </svg>";
+
+}

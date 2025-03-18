@@ -1,0 +1,74 @@
+﻿@page "/users/{userId}"
+@using Microsoft.AspNetCore.Identity
+@using ZBlogApp.BlazorServer.Data
+
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+
+
+<h1 class="mb-4">User Details</h1>
+
+@if (user == null || isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    // add back button navlink to users page
+    <div>
+    <NavLink class="btn btn-primary" href="/users">Back to Users</NavLink>
+    <table class="table table-bordered mt-3" style="font-size: 1.2em; width: auto; padding: 0.5em 1em;">
+        <tr>
+            <th class="col-sm-2">UserName</th>
+            <td class="col-sm-10">@user.UserName</td>
+        </tr>
+        <tr>
+            <th class="col-sm-2">Email</th>
+            <td class="col-sm-10">@user.Email</td>
+        </tr>
+        <tr>
+            <th class="col-sm-2">Phone Number</th>
+            <td class="col-sm-10">@user.PhoneNumber</td>
+        </tr>
+        <tr>
+            <th class="col-sm-2">First Name</th>
+            <td class="col-sm-10">@user.FirstName</td>
+        </tr>
+        <tr>
+            <th class="col-sm-2">Last Name</th>
+            <td class="col-sm-10">@user.LastName</td>
+        </tr>
+        <tr>
+            <th class="col-sm-2">Role</th>
+            <td class="col-sm-10">@((userRoles.ContainsKey(user.Id) ? string.Join(", ", userRoles[user.Id]) : "No Roles"))</td>
+        </tr>
+    </table>
+    <NavLink class="btn btn-primary" href="@($"/users/edit/{user.Id}")">Edit</NavLink>
+    </div>
+
+}
+
+@code
+{
+    private ApplicationUser? user;
+    private Dictionary<string, List<string>> userRoles = new();
+    private bool isLoading = true;
+
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine($"UserDetails.razor - UserId: {UserId}");
+        user = await UserManager.FindByIdAsync(UserId);
+
+        if (user != null)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            userRoles.Add(user.Id, roles.ToList());
+        }
+
+        isLoading = false;
+    }
+}

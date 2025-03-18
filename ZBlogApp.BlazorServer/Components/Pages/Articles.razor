@@ -1,0 +1,194 @@
+﻿@page "/articles"
+
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using ZBlogApp.BlazorServer.Data
+@using ZBlogApp.Library
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<style>
+    .body-column {
+        max-width: 600px;
+    }
+    .title-column {
+        min-width: 200px;
+        font-weight: bold;
+    }
+    .main {
+        max-width: 90%;
+    }
+</style>
+
+<PageTitle>Articles</PageTitle>
+
+<h1 class="mb-4">Articles</h1>
+
+<div>
+    Items per page:
+    <select @bind="pagination.ItemsPerPage" @bind:event="onchange">
+        <option>2</option>
+        <option>5</option>
+        <option>10</option>
+        <option>15</option>
+        <option>20</option>
+        <option>25</option>
+    </select>
+</div>
+
+<div class="mt-3 d-flex align-items-center">
+    <i class="bi bi-funnel me-3"></i> <span class="me-3">Keyword Filter :</span>
+    <input type="search" class="form-control w-50" @bind="keywordFilter" @bind:event="oninput" placeholder="Search for a keyword" />
+</div>
+
+<br>
+
+<div class="d-flex flex-wrap align-items-center gap-3" style="min-width: 80%; margin: auto;">
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-funnel me-3"></i> <span>Range Filter :</span>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-calendar"></i> <span style="min-width: fit-content">Start Date :</span>
+        <input type="date" class="form-control" style="min-width: 150px;" @bind="startDateFilter" @bind:event="onchange" />
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-calendar"></i> <span style="min-width: fit-content">End Date :</span>
+        <input type="date" class="form-control" style="min-width: 150px;" @bind="endDateFilter" @bind:event="onchange" />
+    </div>
+</div>
+
+
+<br>
+
+<div>
+    <NavLink class="btn btn-primary" href="/articles/create">Create New Article</NavLink>
+</div>
+
+<br>
+
+<div>
+    <QuickGrid TGridItem="Article" ItemsProvider="GetArticlesDataAsync" ResizableColumns="true" Pagination="@pagination" class="main">
+        <PropertyColumn Property="@(a => a.Title)" Sortable="true" title="Title" class="title-column">
+            <ColumnOptions>
+            <div class="search-box">
+                <input type="search" autofocus @bind="titleFilter" @bind:event="oninput" placeholder="Search for a title..." />
+            </div>
+            </ColumnOptions>
+        </PropertyColumn>
+        <PropertyColumn Property="@(a => a.Body)" Sortable="true" title="Body" class="body-column">
+            <ColumnOptions>
+                <div class="search-box">
+                    <input type="search" autofocus @bind="bodyFilter" @bind:event="oninput" placeholder="Search in body..." />
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
+        <PropertyColumn Property="@(a => a.ContributorUserName)" Sortable="true" title="Author">
+            <ColumnOptions>
+                <div class="search-box">
+                    <input type="search" autofocus @bind="authorFilter" @bind:event="oninput" placeholder="Search for an author..." />
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
+        <PropertyColumn Property="@(a => a.CreateDate)" Sortable="true" title="Creation Date" />
+        <PropertyColumn Property="@(a => a.StartDate)" Sortable="true" title="Start Date" />
+        <PropertyColumn Property="@(a => a.EndDate)" Sortable="true" title="End Date" />
+        <TemplateColumn Title="Actions">
+            <div class="d-flex gap-2">
+                <a class="btn btn-primary btn-sm" href="/articles/edit/@context.Id">Edit</a>
+                <a class="btn btn-danger btn-sm" href="/articles/delete/@context.Id">Delete</a>
+            </div>
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+
+<Paginator State="@pagination"></Paginator>
+
+@code {
+    GridSort<Article> sort = GridSort<Article>
+        .ByAscending(a => a.Title)
+        .ThenAscending(a => a.CreateDate);
+
+    string keywordFilter = string.Empty;
+    string titleFilter = string.Empty;
+    string bodyFilter = string.Empty;
+    string authorFilter = string.Empty;
+
+    DateTime? startDateFilter;
+    DateTime? endDateFilter;
+
+    private AuthenticationState? context;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    }
+
+    private async ValueTask<GridItemsProviderResult<Article>> GetArticlesDataAsync(GridItemsProviderRequest<Article> request)
+    {
+        IQueryable<Article> query = DbContext.Articles!;
+        
+        // If the user is not an admin, only show their articles
+        if (context != null && context.User.IsInRole("contributor"))
+        {
+            var userId = UserManager.GetUserId(context.User);
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var user = await UserManager.FindByIdAsync(userId);
+                var userFullName = $"{user?.FirstName}.{user?.LastName}";
+                query = query.Where(a => a.ContributorUserName == userFullName);
+            }
+        }
+
+        // Apply filters
+        if (startDateFilter.HasValue && endDateFilter.HasValue)
+            query = query.Where(a => a.StartDate >= startDateFilter)
+                         .Where(a => a.EndDate <= endDateFilter);
+
+        if (!string.IsNullOrEmpty(keywordFilter))
+            query = query.Where(a => (a.Title != null && a.Title.Contains(keywordFilter)) ||
+                                     (a.Body != null && a.Body.Contains(keywordFilter)) ||
+                                     (a.ContributorUserName != null && a.ContributorUserName.Contains(keywordFilter)));
+
+        if (!string.IsNullOrEmpty(titleFilter))
+            query = query.Where(a => a.Title != null && a.Title.Contains(titleFilter));
+
+        if (!string.IsNullOrEmpty(bodyFilter))
+            query = query.Where(a => a.Body != null && a.Body.Contains(bodyFilter));
+
+        if (!string.IsNullOrEmpty(authorFilter))
+            query = query.Where(a => a.ContributorUserName != null && a.ContributorUserName.Contains(authorFilter));
+
+        // Apply sorting
+        query = request.ApplySorting(query);
+
+        // Get total count
+        var totalCount = await query.CountAsync();
+
+        // Ensure a valid integer for Take()
+        var takeCount = request.Count.GetValueOrDefault(10);
+
+        // Apply pagination
+        var items = await query
+            .Skip(request.StartIndex)
+            .Take(takeCount)
+            .ToListAsync();
+
+        return new GridItemsProviderResult<Article>
+        {
+            Items = items,
+            TotalItemCount = totalCount
+        };
+    }
+
+    private PaginationState pagination = new PaginationState
+    {
+        ItemsPerPage = 5
+    };
+
+}

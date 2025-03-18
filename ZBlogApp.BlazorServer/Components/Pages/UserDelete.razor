@@ -1,0 +1,78 @@
+﻿@page "/users/delete/{UserId}"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using ZBlogApp.BlazorServer.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (UserModel == null)
+{
+    <p>User not found.</p>
+}
+else
+{
+    <h1>Delete User</h1>
+    <h3>Are you sure you want to delete this user?</h3>
+    <div class="card p-3" style="max-width: 60%;">
+        <h4>@UserModel.FirstName @UserModel.LastName</h4>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-2">Username</dt>
+            <dd class="col-sm-10">@UserModel.UserName</dd>
+
+            <dt class="col-sm-2">Email</dt>
+            <dd class="col-sm-10">@UserModel.Email</dd>
+
+            <dt class="col-sm-2">Phone Number</dt>
+            <dd class="col-sm-10">@UserModel.PhoneNumber</dd>
+
+            <dt class="col-sm-2">First Name</dt>
+            <dd class="col-sm-10">@UserModel.FirstName</dd>
+
+            <dt class="col-sm-2">Last Name</dt>
+            <dd class="col-sm-10">@UserModel.LastName</dd>
+        </dl>
+        
+        <div class="form-group mt-3">
+            <button class="btn btn-danger" @onclick="HandleDelete">Delete</button>
+            <NavLink class="btn btn-secondary" href="/users">Cancel</NavLink>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string UserId { get; set; } = string.Empty;
+
+    private ApplicationUser? UserModel { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        UserModel = await UserManager.FindByIdAsync(UserId);
+        IsLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleDelete()
+    {
+        if (UserModel is not null)
+        {
+            var result = await UserManager.DeleteAsync(UserModel);
+            if (result.Succeeded)
+            {
+                Navigation.NavigateTo("/users");
+            }
+        }
+    }
+}

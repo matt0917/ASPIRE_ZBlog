@@ -1,0 +1,166 @@
+﻿@page "/users/edit/{UserId}"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using ZBlogApp.BlazorServer.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <h1>Edit User</h1>
+    <div class="card p-3" style="max-width: 60%;">
+        <h1>@UserModel.FirstName @UserModel.LastName</h1>
+        <EditForm Model="UserModel" OnValidSubmit="HandleSubmit" FormName="EditUserForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <input type="hidden" @bind="UserModel.Id" />
+
+            <div class="form-group">
+                <label>Email</label>
+                <InputText class="form-control" @bind-Value="UserModel.Email" />
+            </div>
+
+            <div class="form-group">
+                <label>First Name</label>
+                <InputText class="form-control" @bind-Value="UserModel.FirstName" />
+            </div>
+
+            <div class="form-group">
+                <label>Last Name</label>
+                <InputText class="form-control" @bind-Value="UserModel.LastName" />
+            </div>
+
+            <div class="form-group">
+                <label>Phone Number</label>
+                <InputText class="form-control" @bind-Value="UserModel.PhoneNumber" />
+            </div>
+
+            <div class="form-group">
+                <label>Role</label>
+                <InputSelect class="form-control" @bind-Value="SelectedRole">
+                    @foreach (var role in Roles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="form-group">
+                <label>Role Description</label>
+                <InputText class="form-control" @bind-Value="RoleDescription" readonly/>
+            </div>
+
+            <div class="form-group">
+                <label>Role Created Date:</label>
+                <InputDate class="form-control" @bind-Value="RoleCreatedDate"/>
+            </div>
+
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <NavLink class="btn btn-secondary" href="/users">Cancel</NavLink>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public string UserId { get; set; } = string.Empty;
+
+    private ApplicationUser UserModel { get; set; } = new ApplicationUser
+    {
+        FirstName = string.Empty,
+        LastName = string.Empty,
+    };
+    private List<string> Roles { get; set; } = [];
+    private string SelectedRole { get; set; } = string.Empty;
+    private string RoleDescription { get; set; } = "-";
+    private DateTime? RoleCreatedDate { get; set; } = DateTime.MinValue;
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null)
+        {
+            Navigation.NavigateTo("/users");
+            return;
+        }
+
+        UserModel = user;
+
+        // Get all available roles first
+        Roles = await RoleManager.Roles
+            .Where(r => r.Name != null)
+            .Select(r => r.Name!)
+            .ToListAsync();
+
+        // Get user's current role
+        var userRoles = await UserManager.GetRolesAsync(user);
+        SelectedRole = userRoles.FirstOrDefault() ?? "";
+
+        // Fetch role description and creation date (if available in ApplicationRole)
+        var role = !string.IsNullOrEmpty(SelectedRole) ? await RoleManager.FindByNameAsync(SelectedRole) : null;
+        if (role != null)
+        {
+            RoleDescription = role.Description ?? "-";
+            RoleCreatedDate = role.CreatedDate;
+        }
+        else
+        {
+            RoleDescription = "No role selected";
+            RoleCreatedDate = null;
+        }
+
+        IsLoading = false;
+        // Force the component to re-render Blazor binding values issue
+        StateHasChanged();
+    }
+
+    private async Task HandleSubmit()
+    {
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null)
+        {
+            return;
+        }
+
+        // Update user details
+        user.Email = UserModel.Email;
+        user.UserName = user.Email;
+        user.PhoneNumber = UserModel.PhoneNumber;
+        user.FirstName = UserModel.FirstName;
+        user.LastName = UserModel.LastName;
+
+        var result = await UserManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return;
+        }
+
+        // Update role if changed
+        var currentRoles = await UserManager.GetRolesAsync(user);
+        if (currentRoles.FirstOrDefault() != SelectedRole)
+        {
+            if (currentRoles.Any())
+                await UserManager.RemoveFromRolesAsync(user, currentRoles);
+
+                await UserManager.AddToRoleAsync(user, SelectedRole);
+            }
+        
+        Navigation.NavigateTo("/users");
+    }
+}

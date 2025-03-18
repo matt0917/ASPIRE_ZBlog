@@ -1,0 +1,112 @@
+﻿@page "/users"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using ZBlogApp.BlazorServer.Data
+
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject NavigationManager Navigation
+
+<PageTitle>Users</PageTitle>
+
+<h1>Users</h1>
+
+@if (users == null || isLoading)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table" style="max-width: 70%;">
+        <thead>
+            <tr>
+                <th>UserName</th>
+                <th>Email</th>
+                <th>Phone Number</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Role</th>
+                <th>Role Description</th>
+                <th>Role Created Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                var firstRole = userRoles.ContainsKey(user.Id) ? userRoles[user.Id].FirstOrDefault() : "No Role";
+                var roleInfo = !string.IsNullOrEmpty(firstRole) && roleDetails.ContainsKey(firstRole) ? roleDetails[firstRole] : new RoleInfo();
+
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.Email</td>
+                    <td>@user.PhoneNumber</td>
+                    <td>@user.FirstName</td>
+                    <td>@user.LastName</td>
+                    <td>@firstRole</td>
+                    <td>@roleInfo.Description</td>
+                    <td>@(roleInfo.CreatedDate == DateTime.MinValue ? "-" : roleInfo.CreatedDate.ToString("yyyy-MM-dd"))</td>
+                    <td>
+                        <div style="display: flex; gap: 10px;">
+                            <NavLink class="btn btn-primary" href="@($"/users/{user.Id}")">Details</NavLink>
+                            <NavLink class="btn btn-danger" href="@($"/users/delete/{user.Id}")">Delete</NavLink>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code 
+{
+    private List<ApplicationUser> users = new();
+    private Dictionary<string, List<string>> userRoles = new();
+    private Dictionary<string, RoleInfo> roleDetails = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UserManager.Users.ToListAsync();
+
+        // Get roles for each user
+        foreach (var user in users)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            userRoles[user.Id] = roles.ToList();
+
+            var firstRole = roles.FirstOrDefault();
+            if (!string.IsNullOrEmpty(firstRole) && !roleDetails.ContainsKey(firstRole))
+            {
+                var role = await RoleManager.FindByNameAsync(firstRole);
+                if (role != null)
+                {
+                    roleDetails[firstRole] = new RoleInfo
+                    {
+                        Description = role.Description ?? "-",
+                        CreatedDate = role.CreatedDate
+                    };
+                }
+                else
+                {
+                    roleDetails[firstRole] = new RoleInfo(); // set default value
+                }
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private void NavigateToDetails(string userId)
+    {
+        Console.WriteLine($"Navigating to: /users/{userId}");
+        Navigation.NavigateTo($"/users/{userId}");
+    }
+
+    private class RoleInfo
+    {
+        public string Description { get; set; } = "-";
+        public DateTime CreatedDate { get; set; } = DateTime.MinValue;
+    }
+}

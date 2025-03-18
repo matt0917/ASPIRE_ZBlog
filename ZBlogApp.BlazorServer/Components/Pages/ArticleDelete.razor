@@ -1,0 +1,59 @@
+﻿@page "/articles/delete/{ArticleId}"
+
+@using ZBlogApp.Library
+@using ZBlogApp.BlazorServer.Data
+@inject NavigationManager Navigation
+@inject ApplicationDbContext DbContext
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (articleModel == null)
+{
+    <p>Article not found.</p>
+}
+else
+{
+    <h1>Delete Article</h1>
+    <h3>Are you sure you want to delete this article?</h3>
+    <div class="card p-3" style="max-width: 60%;">
+        <h4>@articleModel.Title</h4>
+        <p>@articleModel.Body</p>
+        <p>Start Date: @articleModel.StartDate</p>
+        <p>End Date: @articleModel.EndDate</p>
+        <p>Contributer: @articleModel.ContributorUserName</p>
+        <EditForm Model="articleModel" OnValidSubmit="HandleDelete" FormName="DeleteArticleForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-danger">Delete</button>
+                <NavLink class="btn btn-secondary" href="/articles">Cancel</NavLink>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public string ArticleId { get; set; } = string.Empty;
+    private Article? articleModel { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        articleModel = await DbContext.Articles.FindAsync(ArticleId);
+        IsLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleDelete()
+    {
+        if (articleModel != null)
+        {
+            Console.WriteLine("*****************Deleting article: " + articleModel.Title);
+            DbContext.Articles.Remove(articleModel);
+            await DbContext.SaveChangesAsync();
+            Navigation.NavigateTo("/articles");
+        }
+    }
+}

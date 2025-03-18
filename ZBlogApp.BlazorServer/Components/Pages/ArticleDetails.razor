@@ -1,0 +1,58 @@
+﻿@page "/articles/{articleId}"
+
+@using ZBlogApp.BlazorServer.Data
+@using ZBlogApp.Library
+@inject NavigationManager Navigation
+@inject ApplicationDbContext DbContext
+
+
+<h1 class="mb-4">Article Details</h1>
+
+@if (article == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h2>@article.Title</h2>
+    <div>
+        <table class="table table-bordered" style="max-width:40%;">
+            <tr>
+                <th>Author</th>
+                <td>@article.ContributorUserName</td>
+            </tr>
+            <tr>
+                <th>Created</th>
+                <td>@article.CreateDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+            <tr>
+                <th>Start Date</th>
+                <td>@article.StartDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+            <tr>
+                <th>End Date</th>
+                <td>@article.EndDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+            <tr>
+                <th>Body</th>
+                <td style="max-width: 300px; word-wrap: break-word;">@((MarkupString)(article.Body ?? string.Empty))</td>
+            </tr>
+        </table>
+        <NavLink class="btn btn-primary" href="/articles">Back to Articles</NavLink>
+    </div>
+}
+
+@code {
+    [Parameter] public string articleId { get; set; } = string.Empty;
+    private Article? article;
+
+    protected override async Task OnInitializedAsync()
+    {
+        article = await DbContext.Set<Article>().FindAsync(articleId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/articles");
+    }
+}

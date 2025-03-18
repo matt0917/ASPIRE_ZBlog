@@ -1,0 +1,98 @@
+﻿@page "/articles/create"
+
+@using Microsoft.AspNetCore.Identity
+@using ZBlogApp.Library
+@using ZBlogApp.BlazorServer.Data
+@inject NavigationManager Navigation
+@inject ApplicationDbContext DbContext
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <h1>Create Article</h1>
+    <div class="card p-3" style="max-width: 60%;">
+        <EditForm Model="articleModel" OnValidSubmit="HandleSubmit" FormName="CreateArticleForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label>Title</label>
+                <InputText class="form-control" @bind-Value="articleModel.Title" />
+            </div>
+
+            <div class="form-group">
+                <label>Body</label>
+                <InputTextArea class="form-control" style="min-height: 300px;" @bind-Value="articleModel.Body" />
+            </div>
+
+            <div class="form-group">
+                <label>Start Date</label>
+                <InputDate class="form-control" @bind-Value="articleModel.StartDate" />
+            </div>
+
+            <div class="form-group">
+                <label>End Date</label>
+                <InputDate class="form-control" @bind-Value="articleModel.EndDate" />
+            </div>
+
+            <div class="form-group mt-3">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <NavLink class="btn btn-secondary" href="/articles">Cancel</NavLink>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    private Article articleModel {get; set;}= new Article { 
+        CreateDate = DateTime.Now,
+        StartDate = DateTime.Now,
+        EndDate = DateTime.Now.AddDays(30)
+    };
+    private bool IsLoading { get; set; } = false;
+    private AuthenticationState? context;
+    private string currentUserFullName = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        context = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = UserManager.GetUserId(context.User);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user != null)
+            {
+                currentUserFullName = $"{user.FirstName}.{user.LastName}";
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!string.IsNullOrEmpty(articleModel?.Body))
+        {
+            articleModel.ContributorUserName = currentUserFullName;
+            // sanitize html
+            articleModel.Body = Helper.SanitizeHtml(articleModel.Body);
+            DbContext.Articles.Add(articleModel);
+        }
+        await DbContext.SaveChangesAsync();
+        Navigation.NavigateTo("/articles");
+    }
+
+    // tinymce editor
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("tinymceInterop.initEditor", "editor");
+        }
+    }
+}
