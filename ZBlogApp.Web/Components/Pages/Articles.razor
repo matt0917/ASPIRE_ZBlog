@@ -3,27 +3,20 @@
 @inject ArticleApiClient apiClient
 @inject NavigationManager NavigationManager
 
-<style>
-    .filter-container {
-        max-width: 900px;
-        margin: 0 auto; /* Center the div */
-    }
-</style>
-
 
 <PageTitle>Articles</PageTitle>
 
 <h1 class="text-center text-decoration-underline">Articles</h1>
 <br mh-5 />
 <div class="d-flex justify-content-center filter-container">
-    <form @onsubmit="FilterArticles">
+    <EditForm Model="this" OnValidSubmit="FilterArticles" FormName="FilterArticles">
         <div class="row">
             <!-- Start Date -->
             <div class="col-md-1">
                 <label for="startDate" class="me-2 fw-bold">Start Date:</label>
             </div>
             <div class="col-md-4">
-                <input type="date" id="startDate" @bind="startDate" class="form-control" />
+                <InputDate id="startDate" @bind-Value="startDate" class="form-control" />
             </div>
 
             <!-- End Date -->
@@ -31,13 +24,13 @@
                 <label for="endDate" class="me-2 fw-bold">End Date:</label>
             </div>
             <div class="col-md-4">
-                <input type="date" id="endDate" @bind="endDate" class="form-control w-200" />
+                <InputDate id="endDate" @bind-Value="endDate" class="form-control w-200" />
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100 mt-2">Filter</button>
             </div>
         </div>
-    </form>
+    </EditForm>
 </div>
 
 <div class="text-start filter-container">
@@ -100,6 +93,7 @@
 
     private async Task FilterArticles()
     {
+        Console.WriteLine($"**********Start Date: {startDate} - End Date: {endDate}");
         articles = (await apiClient.GetArticlesInRangeAsync(startDate ?? DateTime.MinValue, endDate ?? DateTime.MaxValue)).ToList();
     }
 }

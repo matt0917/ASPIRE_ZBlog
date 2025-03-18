@@ -25,10 +25,12 @@ builder.Services.AddAuthentication(options =>
     .AddIdentityCookies();
 
 // Access various DB. types
-if (builder.Configuration.GetValue("aspire", "true") == "true") {
+if (builder.Configuration.GetValue<bool>("aspire")) {
     // Use Aspire provided connection name string
+    Console.WriteLine("*************************************Use ASPIRE SqlServer");
     builder.AddSqlServerDbContext<ApplicationDbContext>("ZBlogDB");
 } else {
+    Console.WriteLine("*************************************Use LOCAL_TEST SqlServer");
     var connectionString = builder.Configuration.GetConnectionString("DATABASE_CONNECTION_STRING") ?? throw new InvalidOperationException("Connection string 'DATABASE_CONNECTION_STRING' not found.");
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(connectionString));
@@ -61,7 +63,6 @@ else
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 

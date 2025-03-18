@@ -13,14 +13,14 @@
 
 <style>
     .body-column {
-        max-width: 600px;
+        max-width: 100%;
     }
     .title-column {
         min-width: 200px;
         font-weight: bold;
     }
     .main {
-        max-width: 90%;
+        max-width: 100%;
     }
 </style>
 
@@ -131,7 +131,8 @@
 
     private async ValueTask<GridItemsProviderResult<Article>> GetArticlesDataAsync(GridItemsProviderRequest<Article> request)
     {
-        IQueryable<Article> query = DbContext.Articles!;
+        IQueryable<Article> query = DbContext.Articles
+            .OrderBy(a => a.Id)!;
         
         // If the user is not an admin, only show their articles
         if (context != null && context.User.IsInRole("contributor"))

@@ -19,7 +19,7 @@ builder.Services.AddHttpClient<ArticleApiClient>(client =>
     {
         // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-        client.BaseAddress = new("http://localhost:5350"); // <- Current port for ZBlogApp.Api
+        client.BaseAddress = new("http://localhost:5350"); // <- Current port for ZBlogApp.Api use Http due to SSL issues with API service
     });
 
 
@@ -32,7 +32,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment()) 
+{
+    // Enable HTTPS redirection instead of http
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 app.UseAntiforgery();

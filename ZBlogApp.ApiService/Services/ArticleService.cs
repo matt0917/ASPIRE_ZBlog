@@ -16,7 +16,9 @@ public class ArticleService
     // Read
     public async Task<List<Article>> GetArticlesAsync()
     {
-        return await dbContext.Articles.ToListAsync();
+        return await dbContext.Articles
+            .OrderBy(a => a.Id)
+            .ToListAsync();
     }
 
     public async Task<Article> GetArticleAsync(string id)

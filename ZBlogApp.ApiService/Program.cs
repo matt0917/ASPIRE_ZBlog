@@ -7,18 +7,17 @@ using ZBlogApp.Library;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Https configuration
-// builder.WebHost.ConfigureKestrel(options =>
-// {
-//     options.ListenAnyIP(7591, listenOptions => listenOptions.UseHttps()); // activates https
-//     options.ListenAnyIP(5350); // secondary http port for service discovery
-// });
+string environment = builder.Environment.EnvironmentName;
+
+Console.WriteLine($"Current Environment: {environment}");
 
 // Access various DB. types
-if (builder.Configuration.GetValue("aspire", "true") == "true") {
+if (builder.Configuration.GetValue<bool>("aspire")) {
     // Use Aspire provided connection name string
+    Console.WriteLine("*************************************Use ASPIRE SqlServer");
     builder.AddSqlServerDbContext<ApplicationDbContext>("ZBlogDB");
 } else {
+    Console.WriteLine("*************************************Use LOCAL_TEST SqlServer");
     var connectionString = builder.Configuration.GetConnectionString("DATABASE_CONNECTION_STRING") ?? throw new InvalidOperationException("Connection string 'DATABASE_CONNECTION_STRING' not found.");
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(connectionString));
