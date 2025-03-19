@@ -1,0 +1,108 @@
+﻿@page "/articles"
+@using ZBlogApp.Library
+@inject ArticleApiClient apiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Articles</PageTitle>
+
+<h1 class="text-center text-decoration-underline">Articles</h1>
+<br mh-5 />
+<div class="d-flex justify-content-center filter-container">
+    <EditForm Model="dateRange" OnValidSubmit="FilterArticles" FormName="dateRangeForm">
+        <div class="row">
+            <!-- Start Date -->
+            <div class="col-md-1">
+                <label for="startDate" class="me-2 fw-bold">Start Date:</label>
+            </div>
+            <div class="col-md-4">
+                <InputDate @bind-Value="dateRange.StartDate" class="form-control" />
+            </div>
+
+            <!-- End Date -->
+            <div class="col-md-1">
+                <label for="endDate" class="me-2 fw-bold">End Date:</label>
+            </div>
+            <div class="col-md-4">
+                <InputDate @bind-Value="dateRange.EndDate" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100 mt-2">Filter</button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+<div class="text-start filter-container">
+    <div class="row pt-md-4">
+        <div class="col-md-12">
+            @if (articles != null && articles.Any())
+            {
+                @foreach (var article in articles)
+                {
+                    <div class="card p-md-4 blog-entry ftco-animate d-md-flex fadeInUp ftco-animated">
+                        <div class="text text-2 pl-md-4">
+                            <h3 class="mb-2">@article.Title</h3>
+                            <div class="meta-wrap">
+                                <p class="meta">
+                                    <span>
+                                        <i class="icon-calendar mr-2"></i>
+                                        Published on: @article.CreateDate
+                                    </span>
+                                    <span>
+                                        <i class="icon-folder-o mr-2"></i>
+                                        @article.ContributorUserName
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mb-2">
+                            @Helper.TruncateString(article.Body ?? "", 100)
+                            <span class="mb-2">
+                                <NavLink class="btn-custom" href="@($"/articles/{article.Id}")">
+                                    More ...
+                                </NavLink>
+                            </span>
+                        </p>
+                    </div>
+                }
+            }
+            else
+            {
+                <h2 class="text-decoration-underline text-center">There are no articles yet.</h2>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IQueryable<Article>? articles;
+
+    private DateRange dateRange = new DateRange
+    {
+        StartDate = DateTime.Now.AddMonths(-1),
+        EndDate = DateTime.Now.AddMonths(6)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = await apiClient.GetArticleAsync();
+        StateHasChanged(); // causes the page to get automatically refreshed
+    }
+
+    private async Task FilterArticles()
+    {
+        Console.WriteLine($"******************Filtering articles from {dateRange.StartDate} to {dateRange.EndDate}");
+
+        articles = await apiClient.GetArticlesInRangeAsync(
+            dateRange.StartDate, 
+            dateRange.EndDate
+        );
+        StateHasChanged();
+    }
+
+    public class DateRange
+    {
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+}

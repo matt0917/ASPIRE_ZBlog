@@ -1,99 +1,104 @@
 ﻿@page "/articles"
+@using Microsoft.EntityFrameworkCore
 @using ZBlogApp.Library
-@inject ArticleApiClient apiClient
+@inject ArticleApiClient ApiClient
 @inject NavigationManager NavigationManager
-
 
 <PageTitle>Articles</PageTitle>
 
 <h1 class="text-center text-decoration-underline">Articles</h1>
 <br mh-5 />
-<div class="d-flex justify-content-center filter-container">
-    <EditForm Model="this" OnValidSubmit="FilterArticles" FormName="FilterArticles">
-        <div class="row">
-            <!-- Start Date -->
-            <div class="col-md-1">
-                <label for="startDate" class="me-2 fw-bold">Start Date:</label>
-            </div>
-            <div class="col-md-4">
-                <InputDate id="startDate" @bind-Value="startDate" class="form-control" />
-            </div>
 
-            <!-- End Date -->
-            <div class="col-md-1">
-                <label for="endDate" class="me-2 fw-bold">End Date:</label>
-            </div>
-            <div class="col-md-4">
-                <InputDate id="endDate" @bind-Value="endDate" class="form-control w-200" />
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100 mt-2">Filter</button>
-            </div>
-        </div>
-    </EditForm>
+<h1 class="mb-4">Articles</h1>
+
+<div>
+    Items per page:
+    <select @bind="pagination.ItemsPerPage">
+        <option>2</option>
+        <option>5</option>
+        <option>10</option>
+        <option>15</option>
+        <option>20</option>
+        <option>25</option>
+    </select>
 </div>
 
-<div class="text-start filter-container">
-    <div class="row pt-md-4">
-        <div class="col-md-12">
-            @if (articles != null && articles.Any())
-            {
-                @foreach (var article in articles)
-                {
-                    if ((startDate == null || article.StartDate >= startDate) &&
-                        (endDate == null || article.EndDate <= endDate))
-                    {
-                        <div class="card p-md-4 blog-entry ftco-animate d-md-flex fadeInUp ftco-animated">
-                            <div class="text text-2 pl-md-4">
-                                <h3 class="mb-2">
-                                    @article.Title
-                                </h3>
-                                <div class="meta-wrap">
-                                    <p class="meta">
-                                        <span>
-                                            <i class="icon-calendar mr-2"></i>
-                                            Published on: @article.CreateDate
-                                        </span>
-                                        <span>
-                                            <i class="icon-folder-o mr-2"></i>
-                                            @article.ContributorUserName
-                                        </span>
-                                    </p>
-                                </div>
-                            </div>
-                            <p class="mb-2">
-                                @Helper.TruncateString(article.Body??"", 100)
-                                <span class="mb-2">
-                                    <NavLink class="btn-custom" href="@($"/articles/{article.Id}")">
-                                        More ...
-                                    </NavLink>
-                                </span>
-                            </p>
-                        </div>
-                    }
-                }
-            }
-            else
-            {
-                <h2 class="text-decoration-underline text-center">There are no articles yet.</h2>
-            }
-        </div>
-    </div>
+<div class="mt-3 d-flex align-items-center">
+    <i class="bi bi-funnel me-3"></i> <span class="me-3">Keyword Filter :</span>
+    <input type="search" class="form-control w-50" @bind="keywordFilter" @bind:event="oninput" placeholder="Search for a keyword" />
 </div>
 
-@code {
-    private List<Article>? articles;
-    private DateTime? startDate;
-    private DateTime? endDate;
+<br>
+
+@if (IQueryableArticles == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <QuickGrid class="table main" Items="@filteredArticles" ResizableColumns="true" Pagination="@pagination">
+        <PropertyColumn Property="@(context => context.Title)" Sortable="true" title="Title" class="title-column">
+            <ColumnOptions>
+                <div class="search-box">
+                    <input type="search" autofocus @bind="titleFilter" @bind:event="oninput" placeholder="Search for a title..." />
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
+            <TemplateColumn Title="Body" class="body-column" Sortable="true">
+                <ChildContent>
+                    <div>
+                        @context.Body?.Substring(0, Math.Min(100, context.Body.Length)) 
+                        <NavLink class="btn-custom" href="@($"/articles/{context.Id}")">
+                            <span style="font-weight: bold; font-style: italic;">More ...</span>
+                        </NavLink>
+                    </div>
+                </ChildContent>
+                <ColumnOptions>
+                    <div class="search-box">
+                        <input type="search" autofocus @bind="bodyFilter" @bind:event="oninput" placeholder="Search in body..." />
+                    </div>
+                </ColumnOptions>
+            </TemplateColumn>
+        <PropertyColumn Property="@(context => context.ContributorUserName)" Sortable="true" title="Author">
+            <ColumnOptions>
+                <div class="search-box">
+                    <input type="search" autofocus @bind="authorFilter" @bind:event="oninput" placeholder="Search for an author..." />
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
+        <PropertyColumn Property="@(context => context.CreateDate)" Sortable="true" title="Creation Date" />
+        <PropertyColumn Property="@(context => context.StartDate)" Sortable="true" title="Start Date" />
+        <PropertyColumn Property="@(context => context.EndDate)" Sortable="true" title="End Date" />
+    </QuickGrid>
+    <Paginator State="@pagination"></Paginator>
+}
+
+
+@code 
+{
+    private IQueryable<Article>? IQueryableArticles;
+    string keywordFilter = string.Empty;
+    string titleFilter = string.Empty;
+    string bodyFilter = string.Empty;
+    string authorFilter = string.Empty;
+
+    IQueryable<Article>? filteredArticles => IQueryableArticles?.Where(a => (a.Title != null && a.Title.Contains(keywordFilter, StringComparison.CurrentCultureIgnoreCase)) && (a.Body != null && a.Body.Contains(keywordFilter, StringComparison.CurrentCultureIgnoreCase)) && (a.ContributorUserName != null && a.ContributorUserName.Contains(keywordFilter, StringComparison.CurrentCultureIgnoreCase)))
+        .Where(a => string.IsNullOrWhiteSpace(titleFilter) || (a.Title != null && a.Title.Contains(titleFilter, StringComparison.CurrentCultureIgnoreCase)))
+        .Where(a => string.IsNullOrWhiteSpace(bodyFilter) || (a.Body != null && a.Body.Contains(bodyFilter, StringComparison.CurrentCultureIgnoreCase)))
+        .Where(a => string.IsNullOrWhiteSpace(authorFilter) || (a.ContributorUserName != null && a.ContributorUserName.Contains(authorFilter, StringComparison.CurrentCultureIgnoreCase)));
 
     protected override async Task OnInitializedAsync()
     {
-        articles = (await apiClient.GetArticleAsync()).ToList();
+        IQueryableArticles = await ApiClient.GetArticleAsync();
+        Console.WriteLine($"Total articles: {IQueryableArticles.Count()}");
+        @* for (int i = 0; i < IQueryableArticles.Count(); i++)
+        {
+            Console.WriteLine($"article: ******************* {IQueryableArticles.ElementAt(i).Title}");
+        } *@
+
+        StateHasChanged();
     }
 
-    private async Task FilterArticles()
-    {
-        Console.WriteLine($"**********Start Date: {startDate} - End Date: {endDate}");
-        articles = (await apiClient.GetArticlesInRangeAsync(startDate ?? DateTime.MinValue, endDate ?? DateTime.MaxValue)).ToList();
-    }
+    private PaginationState pagination = new PaginationState{ ItemsPerPage = 5 };
+
 }

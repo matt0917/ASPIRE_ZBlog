@@ -49,7 +49,7 @@ else
     {
         try
         {
-            article = await apiClient.GetArticleAsync(articleId);
+            article = await apiClient.GetArticleWithIdAsync(articleId);
         }
         catch (Exception ex)
         {
