@@ -85,12 +85,12 @@ Example:
 - Authentication follows standard **JWT Token-based authentication** (if implemented).
 
 ## Database Setup
-By default, the project uses **SQLite**. To configure it:
+By default, the project uses **SqlServer** in a container within Docker. To configure it:
 1. Update `appsettings.json` inside `ZBlogApp.BlazorServer` or `ZBlogApp.ApiService`:
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Data Source=blogapp.db"
+       "default sqlServer credential with you sqlserver base url and port number"
      }
    }
    ```
